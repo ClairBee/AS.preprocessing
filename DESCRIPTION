@@ -1,0 +1,8 @@
+Package: AS.preprocessing
+Title: ArchStats: pre-processing map data for angle extraction
+Version: 0.0.0.9000
+Authors@R: person("Clair", "Barnes", email = "clair.with.no.e@gmail.com", role = c("aut", "cre"))
+Description: Functions to convert a map image from .jpg to a set of points representing features of interest (post-holes).
+Depends: R (>= 3.2.0), jpeg, raster, FNN, plyr
+License: What license is it under?
+LazyData: true
