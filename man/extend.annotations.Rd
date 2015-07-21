@@ -9,7 +9,7 @@ extend.annotations(site, plot = T)
 \arguments{
 \item{site}{Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.}
 
-\item{plot}{Logical indicator: should the new set of features be displayed on a plot?}
+\item{plot}{Boolean indicator: should the new set of features be displayed on a plot?}
 }
 \value{
 New feature set list containing the original raster of numbered features and a matrix of newly assigned feature types.

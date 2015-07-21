@@ -171,7 +171,7 @@ get.orientation <- function(site) {
 #' @export
 #' @examples
 #' assign.by.size(genlis)
-assign.by.size <- function(site, lower = 3, mid = 50, upper = 100, ratio = 0.7) {
+assign.by.size <- function(site, lower = 3, mid = 50, upper = 100, ratio = 0.8, plot = T) {
     
     # get sizes of all clumps identified
     cc <- site$features
@@ -204,8 +204,8 @@ assign.by.size <- function(site, lower = 3, mid = 50, upper = 100, ratio = 0.7) 
     ct[(ct[,2] == 0) & (fr[,2] < upper) & (fr[,2] > mid), 2] <- 4
     
     new.types <<- list(features = cc, feature.types = ct)
-    show.features(new.types)
-    title (main = "Features reclassified according to size & compactness")
+    if (plot) {show.features(new.types)
+               title (main = "Features reclassified according to size & compactness")}
 }
 
 
@@ -214,12 +214,12 @@ assign.by.size <- function(site, lower = 3, mid = 50, upper = 100, ratio = 0.7) 
 #' Identify features that contain a vertical strip of black pixels
 #' @param site Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.
 #' @param l Length of black pixels to be tested for (should be an odd number, but function will add 1 if an even number is supplied). Default is 9.
-#' @param plot Logical indicator: should the new set of features be displayed on a plot?
+#' @param plot Boolean indicator: should the new set of features be displayed on a plot?
 #' @return New feature set list containing the original raster of numbered features and a matrix of newly assigned feature types.
 #' @export
 #' @examples
 #' get.vertical(genlis)
-get.vertical <- function(site, l = 9, plot = T) {
+get.verticals <- function(site, l = 9, plot = T) {
     
     # if l even, make odd
     if(l/2 == round(l/2,0)) {
@@ -251,12 +251,12 @@ get.vertical <- function(site, l = 9, plot = T) {
 #' Identify unclassified/post-hole features that contain a horizontal strip of black pixels, and set as annotations.
 #' @param site Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.
 #' @param l Length of black pixels to be tested for (should be an odd number, but function will add 1 if an even number is supplied). Default is 9.
-#' @param plot Logical indicator: should the new set of features be displayed on a plot?
+#' @param plot Boolean indicator: should the new set of features be displayed on a plot?
 #' @return New feature set list containing the original raster of numbered features and a matrix of newly assigned feature types.
 #' @export
 #' @examples
 #' get.horizontal(genlis)
-get.horizontal <- function(site, l = 9, plot = T) {
+get.horizontals <- function(site, l = 7, plot = T) {
     
     # if l even, make odd
     if(l/2 == round(l/2,0)) {
@@ -292,7 +292,7 @@ get.horizontal <- function(site, l = 9, plot = T) {
 #'
 #' For each feature classed as an annotation, the function extends the feature's footprint directly left, right, up and down. Any features that appear twice in these extensions (ie. features that are directly horizontally or vertically between two annotation features) are also classed as annotations. Helps with picking up broken line boundaries, dots in text etc.
 #' @param site Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.
-#' @param plot Logical indicator: should the new set of features be displayed on a plot?
+#' @param plot Boolean indicator: should the new set of features be displayed on a plot?
 #' @return New feature set list containing the original raster of numbered features and a matrix of newly assigned feature types.
 #' @export
 #' @examples
@@ -323,9 +323,7 @@ extend.annotations <- function(site, plot = T) {
         extensions[[i]] <- neighbours
     }
     ext <- table(unlist(extensions))
-    
-    show.features(site)
-    
+        
     ct[(ct[,1] %in% names(ext[ext == 2])) & (ct[,2] <= 1),2] <- 4
     with.extensions <<- list(features = cc, feature.types = ct)
     if (plot) {show.features(with.extensions)
@@ -418,3 +416,52 @@ get.postholes <- function(site, plot = T) {
 }
 
 
+#' Overlay map showing postholes
+#'
+#' Plot the site's features, with the midpoints of the identified posthole features overlaid.
+#' @param site Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.
+#' @param postholes Matrix of coordinates showing the midpoints of the posthole features to be plotted.
+#' @export
+#' @examples
+#' get.postholes(genlis)
+overlay.postholes <- function(site, postholes) {
+    xy <- xyFromCell(site$features, 1:ncell(site$features))
+    
+    x.lim <- c(floor(min(xy[,1])/10) * 10, ceiling(max(xy[,1])/10) * 10)
+    y.lim <- c(floor(min(xy[,2])/10) * 10, ceiling(max(xy[,2])/10) * 10)
+    
+    plot(site$features, col = "darkgrey", asp = T, legend = F, xlim = x.lim, ylim = y.lim)
+    points(postholes[,1], postholes[,2], pch = 20, cex = 0.5, asp = T, xlim = x.lim, ylim = y.lim)
+}
+
+
+#' Remove isolated features
+#'
+#' For each post-hole feature identified, find the distance to the nearest neighbour. Extremely isolated points (outliers) are defined in the same way as in a boxplot: any points whose nearest-neighbour distance lies more than 1.5 x the IQR above the third quartile.
+#' @param site Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.
+#' @param plot Boolean indicator: should the new set of features be displayed on a plot?
+#' @export
+#' @examples
+#' remove.isolated(genlis)
+remove.isolated <- function(site, plot = T) {
+    
+    cc <- site$features
+    ct <- site$feature.types
+    
+    # get centrepoints of all post-hole features
+    xy <- data.frame(cbind(id = getValues(cc), xyFromCell(cc, 1:ncell(cc))))
+    mids <- ddply(xy[!is.na(xy$id),], .(id), summarise, xm = mean(x), ym = mean(y))
+    pts <- mids[ct[,2] == 1,2:3]
+    
+    d <- knn.dist(pts, k = 1)
+    l <- quantile(d, 0.75) + (1.5 * IQR(d))
+    ct[rownames(pts[d > l,]), 2] <- 0
+    
+    density.filtered <<- list(features = cc, feature.types = ct)
+    
+    if (plot) {
+        plot(site$features, col = "grey", asp = T, legend = F)
+        points(pts[d <= l, 1], pts[d <= l, 2], pch = 20, cex = 0.5, asp = T)
+        points(pts[d > l, 1], pts[d > l, 2], col = "blue", asp = T)
+    }
+}

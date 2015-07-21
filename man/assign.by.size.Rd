@@ -4,7 +4,8 @@
 \alias{assign.by.size}
 \title{Assign categories to features based on size & shape}
 \usage{
-assign.by.size(site, lower = 3, mid = 50, upper = 100, ratio = 0.7)
+assign.by.size(site, lower = 3, mid = 50, upper = 100, ratio = 0.8,
+  plot = T)
 }
 \arguments{
 \item{site}{Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.}
