@@ -171,12 +171,12 @@ get.orientation <- function(site) {
 #' @export
 #' @examples
 #' assign.by.size(genlis)
-assign.by.size <- function(site, lower = 3, mid = 50, upper = 100, ratio = 0.8, plot = T) {
+assign.by.size <- function(site, lower = 3, mid = 50, upper = 100, ratio = 0.8, density = 0.2, plot = T) {
     
     # get sizes of all clumps identified
     cc <- site$features
     fr <- freq(cc)
-    fr <- cbind(fr[!is.na(fr[,1]),],0)
+    fr <- cbind(fr[!is.na(fr[,1]),], ratio = 0, sq.density = 0)
     
     xy <- cbind(xyFromCell(cc, cell = 1:ncell(cc)), z = getValues(cc))
     xy <- xy[!is.na(xy[,3]),]
@@ -186,7 +186,11 @@ assign.by.size <- function(site, lower = 3, mid = 50, upper = 100, ratio = 0.8, 
         max.l <- max(length(unique(coords[,1])),length(unique(coords[,2])))
         min.l <- min(length(unique(coords[,1])),length(unique(coords[,2])))
         
-        fr[i,3] <- min.l / max.l
+        # ratio of shape sides
+        fr[i,3] <- round(min.l / max.l,3)
+        
+        # shape density: if shape was bounded by a square, how much is filled?
+        fr[i,4] <- round(fr[i,2] / max.l^2,3)
     }        
     
     ct <- site$feature.types
@@ -196,6 +200,9 @@ assign.by.size <- function(site, lower = 3, mid = 50, upper = 100, ratio = 0.8, 
     
     # large features
     ct[(ct[,2] == 0) & (fr[,2] >= upper), 2] <- 5
+    
+    # annotations/smaller linear features: long, thin shapes 
+    ct[(ct[,2] <= 1) & (fr[,4] < density), 2] <- 4
     
     # noise: very small features
     ct[(ct[,2] == 0) & (fr[,2] < lower), 2] <- 4
@@ -455,7 +462,7 @@ remove.isolated <- function(site, plot = T) {
     
     d <- knn.dist(pts, k = 1)
     l <- quantile(d, 0.75) + (1.5 * IQR(d))
-    ct[rownames(pts[d > l,]), 2] <- 0
+    ct[c(as.numeric(rownames(pts[d > l,]))), 2] <- 0
     
     density.filtered <<- list(features = cc, feature.types = ct)
     
