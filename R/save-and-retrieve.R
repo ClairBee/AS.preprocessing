@@ -44,8 +44,8 @@ load.features <- function(name) {
 #' 
 show.features <- function(feature.set){
     
-    cols <- c("grey", "black", "red3", "red", "gold", "lightseagreen")
-    desc <- c("Unclassified", "Post-hole", "Scale", "N-S axis", "Annotation", "Large feature")
+    cols <- c("grey", "black", "red3", "red", "gold", "lightseagreen", "purple")
+    desc <- c("Unclassified", "Post-hole", "Scale", "N-S axis", "Annotation", "Large feature", "Changed")
     
     ind <- sort(unique(feature.set$feature.types[,2])) + 1
     l.ind <- ind[(ind != 3) & (ind != 4)]
