@@ -4,7 +4,7 @@
 \alias{remove.annotations}
 \title{Remove annotations}
 \usage{
-remove.annotations(site, plot = T, show.progress = T, remove.similar = T)
+remove.annotations(site, plot = T, show.progress = T, remove.similar = F)
 }
 \arguments{
 \item{site}{Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.}

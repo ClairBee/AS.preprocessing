@@ -166,16 +166,17 @@ get.orientation <- function(site) {
 #' Identify shapes that are not compact by calculating the proportion of cells in a bounding square that are coloured, rather than white. Particularly large shapes are marked as linear features, while smaller ones are marked as annotations. Extremely small shapes are also marked as annotations, considering them to be noise.
 #' @param site Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.
 #' @param density A number from 0 to 1, setting the density threshold below which features are considered 'sparse'. The default is pi/8, based on the assumption that a post-hole is a filled circle, which will take up roughly pi/4 of the cells in a square drawn around it; the threshold is set at half this limit.
+#' @details Density cutoff is the approximate midpoint between the density of a solid circle (pi/8) and the density of the shortest possible straight line (being 3 pixels long, so having density 1/3)
 #' @param lower Number of cells to be considered as just noise. Any cluster of cells below this size is marked as an annotation. Defaults to 3.
-#' @param upper Number of cells above which a feature is considered to be a linear feature of the map, rather than an annotation. Defaults to 100.
+#' @param upper Number of cells above which a feature is considered to be a linear feature of the map, rather than an annotation. Defaults to 100. \n
 #' While we are only looking at post-hole positions, the distinction between annotations and linear features is not very important, and only really exists to speed up processing of functions that look at each annotation in turn.
 #' @param plot Boolean indicator: should the new set of features be displayed on a plot?
 #' @return New feature set list containing the original raster of numbered features and a matrix of newly assigned feature types.
 #' @export
 #' @examples
 #' classify.sparse.shapes(genlis)
-#' genlis <- sparsity.classified
-classify.sparse.shapes <- function(site, density = pi/8, lower = 3, upper = 100, plot = T) {
+#' genlis <- sparse.shapes.classified
+classify.sparse.shapes <- function(site, density = 0.55, lower = 3, upper = 100, plot = T) {
     
     # find annotations/smaller linear features: long, thin shapes
     
@@ -203,8 +204,8 @@ classify.sparse.shapes <- function(site, density = pi/8, lower = 3, upper = 100,
     # treat large features separately - won't be tested for neighbours later
     ct[(ct[,2] %in% c(0, 4)) & (fr[,2] >= upper), 2] <- 5
     
-    sparsity.classified <<- list(features = cc, feature.types = ct)
-    if (plot) {show.features(split.by.sparsity)
+    sparse.shapes.classified <<- list(features = cc, feature.types = ct)
+    if (plot) {show.features(sparse.shapes.classified)
                title (main = "Features reclassified according to size & compactness")}
 }
 
@@ -221,7 +222,7 @@ classify.sparse.shapes <- function(site, density = pi/8, lower = 3, upper = 100,
 #' @export
 #' @examples
 #' remove.annotations(genlis)
-remove.annotations <- function(site, plot = T, show.progress = T, remove.similar = T) {
+remove.annotations <- function(site, plot = T, show.progress = T, remove.similar = F) {
     
     # identify text in same way as when extending annotations
     find.similar.neighbours <- function(feats, n) {
@@ -258,18 +259,20 @@ remove.annotations <- function(site, plot = T, show.progress = T, remove.similar
     cc <- site$features
     ct <- site$feature.types
     
-    tmp <- site$feature.types[site$feature.types[,2] <= 1,1]
-    cc[!(cc %in% tmp)] <- NA
+    unc <- site$feature.types[site$feature.types[,2] <= 1,1]
+    cv <- getValues(cc)
+    cv[!(cv %in% unc)] <- NA
+    cc <- setValues(cc, cv)
     
-    B <- length(tmp)
+    B <- length(unc)
     if (show.progress) {pb <- txtProgressBar(min = 0, max = B, style = 3)}
     fsizes <- c()
     xsizes <- c()
     
-    while (length(tmp) > 0) {
+    while (length(unc) > 0) {
         
-        nbs <- unique(c(tmp[1], find.similar.neighbours(cc, tmp[1])))
-        tmp <- tmp[!(tmp %in% nbs)]    
+        nbs <- unique(c(unc[1], find.similar.neighbours(cc, unc[1])))
+        unc <- unc[!(unc %in% nbs)]    
         
         # find all horizontally-neighbouring features & mark as a set of letters 
         if (length(nbs) > 1) {            
@@ -285,7 +288,7 @@ remove.annotations <- function(site, plot = T, show.progress = T, remove.similar
             xy <- xyFromCell(cc, Which(cc == nbs, cells=TRUE))
             xsizes <- rbind(xsizes, cbind(ind = nbs, x = length(unique(xy[,1])), y = length(unique(xy[,2]))))
         }
-        if (show.progress) {setTxtProgressBar(pb, B-length(tmp))}
+        if (show.progress) {setTxtProgressBar(pb, B-length(unc))}
     }
     
     same.size <- xsizes[(findInterval(xsizes[,2], c(as.numeric(names(which.max(table(fsizes[,2])))) - 1,

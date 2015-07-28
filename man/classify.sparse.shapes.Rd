@@ -4,7 +4,7 @@
 \alias{classify.sparse.shapes}
 \title{Classify sparse shapes}
 \usage{
-classify.sparse.shapes(site, density = pi/8, lower = 3, upper = 100,
+classify.sparse.shapes(site, density = 0.55, lower = 3, upper = 100,
   plot = T)
 }
 \arguments{
@@ -14,7 +14,7 @@ classify.sparse.shapes(site, density = pi/8, lower = 3, upper = 100,
 
 \item{lower}{Number of cells to be considered as just noise. Any cluster of cells below this size is marked as an annotation. Defaults to 3.}
 
-\item{upper}{Number of cells above which a feature is considered to be a linear feature of the map, rather than an annotation. Defaults to 100.
+\item{upper}{Number of cells above which a feature is considered to be a linear feature of the map, rather than an annotation. Defaults to 100. \n
 While we are only looking at post-hole positions, the distinction between annotations and linear features is not very important, and only really exists to speed up processing of functions that look at each annotation in turn.}
 
 \item{plot}{Boolean indicator: should the new set of features be displayed on a plot?}
@@ -25,8 +25,11 @@ New feature set list containing the original raster of numbered features and a m
 \description{
 Identify shapes that are not compact by calculating the proportion of cells in a bounding square that are coloured, rather than white. Particularly large shapes are marked as linear features, while smaller ones are marked as annotations. Extremely small shapes are also marked as annotations, considering them to be noise.
 }
+\details{
+Density cutoff is the approximate midpoint between the density of a solid circle (pi/8) and the density of the shortest possible straight line (being 3 pixels long, so having density 1/3)
+}
 \examples{
 classify.sparse.shapes(genlis)
-genlis <- sparsity.classified
+genlis <- sparse.shapes.classified
 }
 

@@ -51,7 +51,7 @@ show.features <- function(feature.set){
     l.ind <- ind[(ind != 3) & (ind != 4)]
     
     plot(reclassify(feature.set$features, rcl = feature.set$feature.types), col = cols[ind], asp = T, legend = F, frame.plot = F)
-    legend("bottom", legend = desc[l.ind], col = cols[l.ind], pch = 20, cex = 0.6, bty = "n")  
+    legend("bottomright", legend = desc[l.ind], col = cols[l.ind], pch = 20, cex = 0.6, bty = "n")  
 }
 
 
