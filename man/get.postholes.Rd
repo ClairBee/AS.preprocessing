@@ -8,6 +8,8 @@ get.postholes(site, plot = T)
 }
 \arguments{
 \item{site}{Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.}
+
+\item{plot}{Boolean indicator: should the new set of features be displayed on a plot?}
 }
 \value{
 Matrix of coordinates showing the midpoints of the features selected

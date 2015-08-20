@@ -406,6 +406,7 @@ extend.annotations <- function(site, plot = T) {
 #'
 #' For each post-hole feature identified, get the x and y coordinates of the centre of the feature. If no post-holes have been positively identified, treats all unclassified features as post-holes.
 #' @param site Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.
+#' @param plot Boolean indicator: should the new set of features be displayed on a plot?
 #' @return Matrix of coordinates showing the midpoints of the features selected
 #' @export
 #' @examples
@@ -454,3 +455,23 @@ overlay.postholes <- function(site, postholes) {
 }
 
 
+#' Identify remote points
+#'
+#' For a set of x and y coordinates, find the distance to the nearest neighbour. Extremely isolated points (outliers) are defined in the same way as in a boxplot: any points whose nearest-neighbour distance lies more than 1.5 x the IQR above the third quartile.
+#' @param pts A two-column matrix containing the coordinates of the points to be compared.
+#' @param plot Boolean indicator: should the new set of features be displayed on a plot?
+#' @return A Boolean array of length n that can be used to filter points or angles. TRUE indicates that the point is particularly remote from its nearest neighbours; FALSE indicates that point is relatively close to its neighbours.
+#' @export
+#' @examples
+#' get.postholes(genlis)
+filter.by.distance <- function(pts, plot = F) {
+    d <- knn.dist(pts, k = 1)
+    l <- quantile(d, 0.75) + (1.5 * IQR(d))
+    
+    remote <- d > l
+    if (plot) {
+        plot(pts[!remote, ], pch = 20, cex = 0.5, asp = T)
+        points(pts[remote, ], col = adjustcolor("red", alpha.f = 0.5), asp = T, pch = 20, cex = 0.5)
+    }
+    remote
+}
