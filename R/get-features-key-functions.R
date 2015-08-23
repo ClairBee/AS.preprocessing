@@ -106,8 +106,8 @@ get.scale <- function(site, l = 17) {
 #' @return The angle (in radians) of the N-S axis.
 #' @export
 #' @examples
-#' get.orientation(genlis)
-get.orientation <- function(site) {
+#' get.NS.axis(genlis)
+get.NS.axis <- function(site, show.result = F) {
     
     cc <- site$features
     ct <- site$feature.types
@@ -145,16 +145,15 @@ get.orientation <- function(site) {
     h <- sqrt(sum((L-R)^2))
     v <- sqrt(sum((U-B)^2))
     if (v > h) {
-        axis <- atan2((U-B)[1], (U-B)[2])
+        axis <- atan2((U-B)[2], (U-B)[1])
     } else {
-        axis <- atan2((R-L)[1], (R-L)[2])
+        axis <- atan2((R-L)[2], (R-L)[1])
     }
     
     ct[target, 2] <- 3
     
     angle.found <- list(features = site$features, feature.types = ct)
-    show.features(angle.found)
-    print("New object 'NS.marked' created with updated feature types.", quote = F)
+    if (show.result) {show.features(angle.found)}
     NS.marked <<- angle.found
     axis
 }
