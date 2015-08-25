@@ -146,14 +146,22 @@ get.NS.axis <- function(site, show.result = F) {
     v <- sqrt(sum((U-B)^2))
     if (v > h) {
         axis <- atan2((U-B)[2], (U-B)[1])
+        x.0 <- B[1]; y.0 <- B[2]; l <- v * 0.75
     } else {
         axis <- atan2((R-L)[2], (R-L)[1])
+        x.0 <- L[1]; y.0 <- L[2]; l <- h * 0.75
     }
     
     ct[target, 2] <- 3
     
     angle.found <- list(features = site$features, feature.types = ct)
-    if (show.result) {show.features(angle.found)}
+    if (show.result) {
+        show.features(angle.found)
+        r <- mean(res(site$features)) * 100
+        Arrows(x0 = x.0, y0 = y.0, 
+               x1 = x.0 + l * cos(axis), y1 = y.0 + l * sin(axis),
+               code = 2, lwd = 2, col = "blue")
+    }
     NS.marked <<- angle.found
     axis
 }
@@ -173,9 +181,9 @@ get.NS.axis <- function(site, show.result = F) {
 #' @return New feature set list containing the original raster of numbered features and a matrix of newly assigned feature types.
 #' @export
 #' @examples
-#' classify.sparse.shapes(genlis)
+#' exclude.sparse.shapes(genlis)
 #' genlis <- sparse.shapes.classified
-classify.sparse.shapes <- function(site, density = 0.55, lower = 3, upper = 100, plot = T) {
+exclude.sparse.shapes <- function(site, density = 0.55, lower = 3, upper = 100, plot = T) {
     
     # find annotations/smaller linear features: long, thin shapes
     
@@ -303,11 +311,11 @@ remove.annotations <- function(site, plot = T, show.progress = T, remove.similar
         ct[same.size, 2] <- 6
     } else {
         same.size <<- same.size
-        cat("Lists of possible same-size objects and smaller objects created.")
+        cat("\n Lists of possible same-size objects and smaller objects created.")
     }
     
     if (plot) {show.features(list(features = site$features, feature.types = ct))
-               title(main = "Sequences of similar horizontal shapes marked as annotations")}
+               title(main = "\n Sequences of similar horizontal shapes marked as annotations")}
     if (show.progress) {close(pb)}
     ct[ct[,2] == 6, 2] <- 4
     annotations.removed <<- list(features = site$features, feature.types = ct)
@@ -464,13 +472,70 @@ overlay.postholes <- function(site, postholes) {
 #' @examples
 #' get.postholes(genlis)
 filter.by.distance <- function(pts, plot = F) {
-    d <- knn.dist(pts, k = 1)
+    d <- c(knn.dist(pts, k = 1))
     l <- quantile(d, 0.75) + (1.5 * IQR(d))
     
-    remote <- d > l
+    remote <- d <= l
     if (plot) {
-        plot(pts[!remote, ], pch = 20, cex = 0.5, asp = T)
-        points(pts[remote, ], col = adjustcolor("red", alpha.f = 0.5), asp = T, pch = 20, cex = 0.5)
+        plot(pts[remote, ], pch = 20, cex = 0.5, asp = T)
+        points(pts[!remote, ], col = adjustcolor("red", alpha.f = 0.5), asp = T, pch = 20, cex = 0.5)
     }
     remote
+}
+
+
+#' Fill in broken (-.-) line boundary
+#'
+#' Find all linear features in site and identify any features lying along their longest axis. Any features aligned to 2 or more linear features are considered to be part of a broken-line boundary.
+#' @param site Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.
+#' @param plot.progress Boolean indicator: should the function's progress be displayed on a plot?
+#' @param s Threshold value between 0 and 1, indicating how 'sparse' a feature must be to be considered as a line. Default is 0.2.
+#' @return Vector of ids of features belonging to the boundary.
+#' @export
+#' @examples
+#' # find boundary features
+#' boundary <- fill.broken.boundary(genlis, plot.progress = T)
+#' # set identified features to 'annotation' type
+#' genlis$feature.types[genlis$feature.types[,1] %in% boundary, 2] <- 4
+fill.broken.boundary <- function(site, plot.progress = F, s = 0.2) {
+    z <- feature.dims(site)
+    
+    if (plot.progress) {plot(reclassify(genlis$features, cbind(z$id, z$density < s)))}
+    # only look at very sparse features
+    sp <- z$id[z$density < s]
+    cc <- site$features
+    nbs <- c()
+    n <- c()
+    
+    for (i in 1:length(sp)) {
+        xy <- xyFromCell(cc, Which(cc == sp[i], cells = TRUE))
+        if (plot.progress) {points(xy, pch = 20, cex = 0.2, col = "black")}
+        ext <- extent(xy)
+        
+        # find ends of lines
+        if ((ext@xmax - ext@xmin) > (ext@ymax - ext@ymin)) {
+            e1 = xy[which.max(xy[,1]),]
+            e2 = xy[which.min(xy[,1]),]
+        } else {
+            e1 = xy[which.max(xy[,2]),]
+            e2 = xy[which.min(xy[,2]),]
+        }
+        l <- sqrt(sum((e1 - e2)^2))
+        a <- atan2(e1[2] - e2[2], e1[1] - e2[1])
+        adj <- c(l * cos(a), l * sin(a))
+        ends <- rbind(e1 + adj, e2 - adj)
+        transect <- SpatialLines(list(Lines(list(Line(ends)), ID = 1)))
+        if (plot.progress) {lines(transect, col = "blue")}
+        tmp <- unique(unlist(extract(cc, transect)))
+        nbs <- c(nbs, tmp[!is.na(tmp) & tmp != sp[i]])
+        n[i] <- length(tmp[!is.na(tmp) & tmp != sp[i]])
+    }
+    # boundary contains any features between two or more linear features on list
+    # and features with neighbours
+    b <- unique(c(as.numeric(rownames(table(nbs))[table(nbs) > 1]), sp[n > 0]))
+    
+    # remove any unusually large features (outliers)
+    l <- (1.5 * IQR(z$freq[b])) + quantile(z$freq[b], 0.75)
+    
+    z$id[z$id %in% b & z$freq <= l]
 }
