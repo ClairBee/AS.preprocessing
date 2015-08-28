@@ -3,6 +3,7 @@
 export(assign.by.size)
 export(exclude.sparse.shapes)
 export(extend.annotations)
+export(feature.closing)
 export(feature.dims)
 export(fill.broken.boundary)
 export(filter.by.distance)

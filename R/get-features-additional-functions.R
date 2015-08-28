@@ -266,7 +266,7 @@ select.feature <- function(site, replot = F) {
 #' @return A matrix containing the dimensions of every feature identified in the map.
 #' @export
 #' @examples
-#' remove.isolated(genlis)
+#' feature.dims(genlis)
 feature.dims <- function(site) {
     
     xy <- data.frame(cbind(id = getValues(site$features), xyFromCell(site$features, 1:ncell(site$features))))
@@ -289,4 +289,6 @@ feature.dims <- function(site) {
     dims$ratio <- d.min/d.max
     dims
 }
+
+
 

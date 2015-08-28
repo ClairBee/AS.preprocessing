@@ -4,8 +4,7 @@
 \alias{exclude.sparse.shapes}
 \title{Classify sparse shapes}
 \usage{
-exclude.sparse.shapes(site, density = 0.55, lower = 3, upper = 100,
-  plot = T)
+exclude.sparse.shapes(site, density = 0.55, lower = 3, upper, plot = T)
 }
 \arguments{
 \item{site}{Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.}
@@ -14,7 +13,7 @@ exclude.sparse.shapes(site, density = 0.55, lower = 3, upper = 100,
 
 \item{lower}{Number of cells to be considered as just noise. Any cluster of cells below this size is marked as an annotation. Defaults to 3.}
 
-\item{upper}{Number of cells above which a feature is considered to be a linear feature of the map, rather than an annotation. Defaults to 100. \n
+\item{upper}{(Optional) Number of cells above which a feature is considered to be a linear feature of the map, rather than an annotation. No linear features will be identified if this is omitted.
 While we are only looking at post-hole positions, the distinction between annotations and linear features is not very important, and only really exists to speed up processing of functions that look at each annotation in turn.}
 
 \item{plot}{Boolean indicator: should the new set of features be displayed on a plot?}

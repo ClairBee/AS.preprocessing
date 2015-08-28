@@ -17,6 +17,6 @@ Creates a matrix containing the dimensions of every feature in the map: feature 
 Can be used to investigate plausible thresholds for the other functions.
 }
 \examples{
-remove.isolated(genlis)
+feature.dims(genlis)
 }
 

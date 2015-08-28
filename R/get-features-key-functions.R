@@ -175,7 +175,7 @@ get.NS.axis <- function(site, show.result = F) {
 #' @param density A number from 0 to 1, setting the density threshold below which features are considered 'sparse'. The default is pi/8, based on the assumption that a post-hole is a filled circle, which will take up roughly pi/4 of the cells in a square drawn around it; the threshold is set at half this limit.
 #' @details Density cutoff is the approximate midpoint between the density of a solid circle (pi/8) and the density of the shortest possible straight line (being 3 pixels long, so having density 1/3)
 #' @param lower Number of cells to be considered as just noise. Any cluster of cells below this size is marked as an annotation. Defaults to 3.
-#' @param upper Number of cells above which a feature is considered to be a linear feature of the map, rather than an annotation. Defaults to 100. \n
+#' @param upper (Optional) Number of cells above which a feature is considered to be a linear feature of the map, rather than an annotation. No linear features will be identified if this is omitted.
 #' While we are only looking at post-hole positions, the distinction between annotations and linear features is not very important, and only really exists to speed up processing of functions that look at each annotation in turn.
 #' @param plot Boolean indicator: should the new set of features be displayed on a plot?
 #' @return New feature set list containing the original raster of numbered features and a matrix of newly assigned feature types.
@@ -183,14 +183,16 @@ get.NS.axis <- function(site, show.result = F) {
 #' @examples
 #' exclude.sparse.shapes(genlis)
 #' genlis <- sparse.shapes.classified
-exclude.sparse.shapes <- function(site, density = 0.55, lower = 3, upper = 100, plot = T) {
+exclude.sparse.shapes <- function(site, density = 0.55, lower = 3, upper, plot = T) {
     
     # find annotations/smaller linear features: long, thin shapes
-    
     # get sizes of all clumps identified
     cc <- site$features
     fr <- freq(cc)
     fr <- cbind(fr[!is.na(fr[,1]),], sq.density = 0)
+    
+    # if no limit set for large features, ignore by setting limit just above size of largest feature 
+    if (missing(upper)) {upper <- max(fr[,2] + 1)}
     
     xy <- cbind(xyFromCell(cc, cell = 1:ncell(cc)), z = getValues(cc))
     xy <- xy[!is.na(xy[,3]),]
@@ -537,5 +539,93 @@ fill.broken.boundary <- function(site, plot.progress = F, s = 0.2) {
     # remove any unusually large features (outliers)
     l <- (1.5 * IQR(z$freq[b])) + quantile(z$freq[b], 0.75)
     
-    z$id[z$id %in% b & z$freq <= l]
+    boundary <- z$id[z$id %in% b & z$freq <= l]
+    site$feature.types[site$feature.types[,1] %in% boundary, 2] <- 4
+    boundary.filled <<- site
+}
+
+
+#' Find features whose shape differs after a morphological closing
+#'
+#' For all unclassified features, removes holes from polygons and performs a morphological closing with radius 1 pixel, and determines which features are unaffected by this process.
+#' @param site Feature set list, containing a raster of all features, and a matrix assigning each feature to a particular type.
+#' @param progress.bar Boolean: display progress bar or not? Default is F.
+#' @param plot.progress Boolean: plot features and colour those that have been checked, or not? Default is F
+#' @param rm Radius modifier: how many pixels' widths should be used as a radius for the dilation and erosion processes of the closing? Default is 1. Higher values will lead to a greater degree of smoothing.
+#' @return Matrix showing the cluster ID and area before and after the closing operation, and a list of polygon objects representing the features after closing.
+#' @export
+#' @examples
+#' close.features(sparse.shapes.classified, plot.progress = T)
+feature.closing <- function(site, progress.bar = F, plot.progress = F, rm = 1) {
+    fts <- site$features
+    
+    # select only potential post-hole candidates for conversion
+    cand <- cbind(site$feature.types[,1], site$feature.types[,1])
+    cand[site$feature.types[,2] > 0, 2] <- NA
+    
+    r <- signif(mean(res(fts)),2) * rm
+    
+    site.poly <- rasterToPolygons(reclassify(fts, cand), dissolve = T)
+    if (plot.progress) {plot(site.poly)}
+    
+    dilated.areas <- matrix(nrow = length(site.poly), ncol = 3)
+    closed <- list()
+    if (progress.bar) {pb <- txtProgressBar(min = 0, max = length(site.poly), style = 3)}
+    
+    # support functions (because coercion function has known bug)
+    # functions taken from https://stat.ethz.ch/pipermail/r-sig-geo/2009-May/005781.html
+    owin2Polygons <- function(x, id="1") {
+        stopifnot(is.owin(x))
+        x <- as.polygonal(x)
+        closering <- function(df) { df[c(seq(nrow(df)), 1), ] }
+        pieces <- lapply(x$bdry,
+                         function(p) {
+                             Polygon(coords=closering(cbind(p$x,p$y)),
+                                     hole=is.hole.xypolygon(p))  })
+        z <- Polygons(pieces, id)
+        return(z)
+    }
+    
+    owin2SP <- function(x) {
+        stopifnot(is.owin(x))
+        y <- owin2Polygons(x)
+        z <- SpatialPolygons(list(y))
+        return(z)
+    }
+    
+    # function taken from https://stat.ethz.ch/pipermail/r-sig-geo/2014-January/020139.html
+    remove.polygon.holes <- function(SPDF) {
+        # SPDF can be a SpatialPolygonsDataFrame or a SpatialPolygons object
+        polys <- slot(SPDF, "polygons")
+        holes <- lapply(polys, function(x) sapply(slot(x, "Polygons"), slot,
+                                                  "hole"))
+        res <- lapply(1:length(polys), function(i) slot(polys[[i]],
+                                                        "Polygons")[!holes[[i]]])
+        IDs <- row.names(SPDF)
+        SpatialPolygons(lapply(1:length(res), function(i)
+            Polygons(res[[i]], ID=IDs[i])), proj4string=CRS(proj4string(SPDF)))
+    }
+    
+    for (i in 1:length(site.poly)) {
+        
+        f <- remove.polygon.holes(site.poly[i,])
+        closed[[i]] <- closing(as(f, "owin"), r, polygonal = T)
+        
+        dilated.areas[i,1] <- unique(getValues(fts)[cellFromPolygon(fts, site.poly[i,])[[1]]])
+        dilated.areas[i,2] <- length(cellFromPolygon(fts, site.poly[i,])[[1]])
+        dilated.areas[i,3] <- length(cellFromPolygon(fts, owin2SP(closed[[i]]))[[1]])
+        
+        if (plot.progress) {
+            if (abs(dilated.areas[i,2] - dilated.areas[i,3]) > 1) {cl = "red"} else {cl = "blue"}
+            plot(closed[[i]], col = adjustcolor(cl, alpha.f = 0.5), add = T)
+        }
+        
+        if (progress.bar) {setTxtProgressBar(pb, i)}
+    }
+    
+    fts <- site$feature.types
+    fts[fts[,1] %in% dilated.areas[dilated.areas[,3] - dilated.areas[,2] > 1,1],2] <- 4
+    features.closed <<- list(features = site$features, feature.types = fts)
+    
+    list(ft.areas = dilated.areas, closing = closed)
 }
