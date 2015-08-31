@@ -21,8 +21,6 @@ Find all linear features in site and identify any features lying along their lon
 }
 \examples{
 # find boundary features
-boundary <- fill.broken.boundary(genlis, plot.progress = T)
-# set identified features to 'annotation' type
-genlis$feature.types[genlis$feature.types[,1] \%in\% boundary, 2] <- 4
+fill.broken.boundary(genlis, plot.progress = T)
 }
 

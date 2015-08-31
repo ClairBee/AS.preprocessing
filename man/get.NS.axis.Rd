@@ -16,6 +16,6 @@ The angle (in radians) of the N-S axis.
 Identify the N-S marker on the image and calculate the angle of the N-S axis. Since the marker shape varies from plan to plan, it must be selected manually.
 }
 \examples{
-get.NS.axis(genlis)
+genlis.NS <- get.NS.axis(genlis)
 }
 

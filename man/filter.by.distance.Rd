@@ -18,6 +18,6 @@ A Boolean array of length n that can be used to filter points or angles. TRUE in
 For a set of x and y coordinates, find the distance to the nearest neighbour. Extremely isolated points (outliers) are defined in the same way as in a boxplot: any points whose nearest-neighbour distance lies more than 1.5 x the IQR above the third quartile.
 }
 \examples{
-get.postholes(genlis)
+nn.filter <- filter.by.distance(centres, plot = T)
 }
 

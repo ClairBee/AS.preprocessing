@@ -15,6 +15,6 @@ overlay.postholes(site, postholes)
 Plot the site's features, with the midpoints of the identified posthole features overlaid.
 }
 \examples{
-get.postholes(genlis)
+overlay.postholes(genlis)
 }
 

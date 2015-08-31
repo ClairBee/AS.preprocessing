@@ -106,7 +106,7 @@ get.scale <- function(site, l = 17) {
 #' @return The angle (in radians) of the N-S axis.
 #' @export
 #' @examples
-#' get.NS.axis(genlis)
+#' genlis.NS <- get.NS.axis(genlis)
 get.NS.axis <- function(site, show.result = F) {
     
     cc <- site$features
@@ -452,7 +452,7 @@ get.postholes <- function(site, plot = T) {
 #' @param postholes Matrix of coordinates showing the midpoints of the posthole features to be plotted.
 #' @export
 #' @examples
-#' get.postholes(genlis)
+#' overlay.postholes(genlis)
 overlay.postholes <- function(site, postholes) {
     xy <- xyFromCell(site$features, 1:ncell(site$features))
     
@@ -472,7 +472,7 @@ overlay.postholes <- function(site, postholes) {
 #' @return A Boolean array of length n that can be used to filter points or angles. TRUE indicates that the point is particularly remote from its nearest neighbours; FALSE indicates that point is relatively close to its neighbours.
 #' @export
 #' @examples
-#' get.postholes(genlis)
+#' nn.filter <- filter.by.distance(centres, plot = T)
 filter.by.distance <- function(pts, plot = F) {
     d <- c(knn.dist(pts, k = 1))
     l <- quantile(d, 0.75) + (1.5 * IQR(d))
@@ -496,13 +496,11 @@ filter.by.distance <- function(pts, plot = F) {
 #' @export
 #' @examples
 #' # find boundary features
-#' boundary <- fill.broken.boundary(genlis, plot.progress = T)
-#' # set identified features to 'annotation' type
-#' genlis$feature.types[genlis$feature.types[,1] %in% boundary, 2] <- 4
+#' fill.broken.boundary(genlis, plot.progress = T)
 fill.broken.boundary <- function(site, plot.progress = F, s = 0.2) {
     z <- feature.dims(site)
     
-    if (plot.progress) {plot(reclassify(genlis$features, cbind(z$id, z$density < s)))}
+    if (plot.progress) {plot(reclassify(site$features, cbind(z$id, z$density < s)), legend = F)}
     # only look at very sparse features
     sp <- z$id[z$density < s]
     cc <- site$features
